@@ -1,6 +1,6 @@
 //*********************************************************
 //Shaun Mbateng
-//This program is a game of connect fout.
+//This program is a game of Connect Four.
 //**********************************************************
 
 #include <iostream>
@@ -17,6 +17,7 @@ bool verticalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, i
 bool horizontalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Horizontal Win
 bool diagonalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Diagonal Win
 bool draw(char board[][7], int8_t rows, int8_t columns); //Function That Checks for Draw Game
+int8_t checkboard(char symbol, char board[][7], int8_t rows, int8_t columns); //Function for Computer to Check for Win or Loss
 
 int main () 
 {
@@ -210,11 +211,12 @@ int8_t humanmove(ostream & out, bool player, char board[][7], int8_t rows, int8_
 	cout<<"\nPlayer "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Display Play Message
 	out<<"Player "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Outfile Play Message
 	
-	if (
-			verticalwin(board, rows, columns, r, col) || 
-			horizontalwin(board, rows, columns, r, col) || 
-			diagonalwin(board, rows, columns, r, col)
-		) //Check for Game Win
+	if 
+	(
+		verticalwin(board, rows, columns, r, col) || 
+		horizontalwin(board, rows, columns, r, col) || 
+		diagonalwin(board, rows, columns, r, col)
+	) //Check for Game Win
 		return 1;
 	if (draw(board, rows, columns)) //Check for Draw Game
 		return 2;
@@ -224,7 +226,7 @@ int8_t humanmove(ostream & out, bool player, char board[][7], int8_t rows, int8_
 
 int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t rows, int8_t columns) //This Function Handles the Dumb Computer Move
 {
-	int8_t col; //Playing Column
+	int8_t col = -1; //Playing Column, Initialized to -1
 	int8_t r = 0; //Playing Row, Initialized to Zero
 	char symbol; //Playing Symbol
 	
@@ -233,12 +235,28 @@ int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t
 	else //Second is O
 		symbol = 'O';
 	
-	//Create Random Number from 0-6, Loop Till Acceptable Input
-	do
+	if (diff>1)
 	{
-		col=rand()%6;
+		col = checkboard(symbol, board, rows, columns); //Check If Computer can Win
+		
+		if (col==-1)
+		{
+			char tmp; //Temporary Variable for Symbol
+			
+			if (player==0) //Set to Opposite Player Symbol
+				tmp = 'O';
+			else
+				tmp = 'X';
+			col = checkboard(tmp, board, rows, columns); //Check If Computer Will Lose
+		}
 	}
-	while (board[rows-1][col] != '-');
+	if (col==-1)
+	{
+		//Create Random Number from 0-6, Loop Till Acceptable Input
+		do
+			col=rand()%6;
+		while (board[rows-1][col] != '-');
+	}
 	
 	while (board[r][col] != '-' && r<=rows) //Loop Till Open Space in Column Found
 		r++;
@@ -247,11 +265,12 @@ int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t
 	cout<<"\nComputer Player "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Display Play Message
 	out<<"Computer Player "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Outfile Play Message
 	
-	if (
-			verticalwin(board, rows, columns, r, col) || 
-			horizontalwin(board, rows, columns, r, col) || 
-			diagonalwin(board, rows, columns, r, col)
-		) //Check for Game Win
+	if 
+	(
+		verticalwin(board, rows, columns, r, col) || 
+		horizontalwin(board, rows, columns, r, col) || 
+		diagonalwin(board, rows, columns, r, col)
+	) //Check for Game Win
 		return 1;
 	if (draw(board, rows, columns)) //Check for Draw Game
 		return 2;
@@ -332,6 +351,30 @@ bool diagonalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, i
 	if (count>=4) //If Enough Consecutive Pieces
 		return true;
 	
+	count = 1; //Reset Count
+	r = moverow+1; //Reinitialize to Row Above
+	c = movecolumn-1; //Reinitialize to Column Before
+	
+	while (board[moverow][movecolumn] == board[r][c] && r<rows && c>=0) //Count Consecutive Pieces to the Up-Left
+	{
+			count++; //Increment Count
+			r++; //Check Row Below
+			c--; //Check Column Before
+	}
+	
+	r = moverow-1; //Reinitialize to Row Below 
+	c = movecolumn+1; //Reinitialize to Column After
+	
+	while (board[moverow][movecolumn] == board[r][c] && r>=0 && c<columns) //Count Consecutive Pieces to the Down-Right
+	{
+			count++; //Increment Count
+			r--; //Check Row Below
+			c++; //Check Column Before
+	}
+	
+	if (count>=4) //If Enough Consecutive Pieces
+		return true;
+	
 	return 0;
 	
 }
@@ -346,4 +389,38 @@ bool draw(char board[][7], int8_t rows, int8_t columns) //Function That Checks f
 		return true;
 	
 	return false; //If Not, Return False
+}
+
+int8_t checkboard(char symbol, char board[][7], int8_t rows, int8_t columns) //Function for Computer to Check for Win or Loss
+{
+	int8_t r; //Playing Row
+	int8_t c = 0; //Playing Column
+	
+	for (c; c<columns; c++) //Check Each Column
+	{	
+		if (board[rows-1][c] !='-') //Column is Filled, No Point in Checking
+			continue;
+		
+		r = 0; //Initialize Row
+		
+		while (board[r][c] != '-' && r<=rows) //Loop Till Open Space in Column Found
+			r++;
+		
+		board[r][c] = symbol; //Place Piece
+		
+		if 
+		(
+			verticalwin(board, rows, columns, r, c) || 
+			horizontalwin(board, rows, columns, r, c) || 
+			diagonalwin(board, rows, columns, r, c)
+		) //Check for Game Win
+		{
+			board[r][c] = '-'; //Empty Spot
+			return c; //Return Column Number
+		}
+		
+		board[r][c] = '-'; //Empty Spot
+	}
+	
+	return -1; //Return -1 on Default
 }
