@@ -1,29 +1,31 @@
 //*********************************************************
 //Shaun Mbateng
 //This program is a game of connect fout.
-//***********************************************************
+//**********************************************************
 
 #include <iostream>
 #include <fstream>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 using namespace std;
 
-void drawboard(ostream &, char [][7], int, int); // This Function Draws the Board.
-int8_t humanmove(ostream & out, bool player, char board[][7], int rows, int columns); //This Function Handles the Human Move
-bool verticalwin(char board[][7], int rows, int columns, int moverow, int movecolumn); //Funtion That Checks for Vertical Win
-bool horizontalwin(char board[][7], int rows, int columns, int moverow, int movecolumn); //Funtion That Checks for Horizontal Win
-bool diagonalwin(char board[][7], int rows, int columns, int moverow, int movecolumn); //Funtion That Checks for Diagonal Win
-bool draw(char board[][7], int rows, int columns); //Function That Checks for Draw Game
+void drawboard(ostream &, char [][7], int8_t, int8_t); // This Function Draws the Board.
+int8_t humanmove(ostream & out, bool player, char board[][7], int8_t rows, int8_t columns); //This Function Handles the Human Move
+int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t rows, int8_t columns); //This Function Handles the Dumb Computer Move
+bool verticalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Vertical Win
+bool horizontalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Horizontal Win
+bool diagonalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Diagonal Win
+bool draw(char board[][7], int8_t rows, int8_t columns); //Function That Checks for Draw Game
 
 int main () 
 {
-	int col; //Player Move
 	int nop; //Number of Human Players
+	int8_t diff; //Computer Difficulty Level, Will be 1, 2, or 3
+	int8_t win = 0; //Whether Player has Won, or Quit, Will be 0, 1, or 2 When Returned
 	bool player = 1; //Player Number, Initialized to Second Player
-	int diff; //Computer Difficulty Level
+	bool first; //In 1 Human Player Game, Pick Who Goes First
 	char board [6][7] = {0}; //Game Board
-	int8_t win = 0; //Whether Player has Won, or Quit, Will be 0, 1, or 2
-	bool cfirst; //In 1 Player Game, Pick Who Goes First
 	ofstream outfile; //File to Print Results to
 
 	outfile.open("GameLog.txt"); //Open GameLog
@@ -47,23 +49,42 @@ int main ()
 	
 	if (nop<2) //If at Least One Computer Player
 	{
+		srand(time(NULL));	//Will Need Random Number Generator
+		int btmp; //Temp Variable to Handle Human Error in Inputs
 		cout<<"\nWhat is the difficulty level of the computer(s)?"<<endl;
 		
 		do //Loop Till Correct Input for Difficulty Level
 		{
 			cout<<"1=Easy, 2=Medium, 3=Hard: ";
-			cin>>diff;
+			cin>>btmp;
 			/*
 			cin.ignore(numeric_limits<streamsize>::max(), '\n'); //discard input
     		cin.clear(); //clear bad input flag
 			*/
 		}
-		while (diff<1 || diff>3);
+		while (btmp<1 || btmp>3);
+		
+		diff = btmp; //Set Difficulty Level
+		
+		if (nop==1) //One Human, One Computer
+		{
+			int ltmp; //Temp Variable to Handle Human Error in Inputs
+			cout<<"\nDo you want to go first?"<<endl;
+			
+			do
+			{
+				cout<<"Enter 0 for no, 1 for yes: ";
+				cin>>ltmp;
+			}
+			while (ltmp<0 || ltmp>1);
+			
+			first = ltmp; //Pick who Goes First
+		}
 	}
 	
-	for (int x = 0; x < 6; x++) //Draw Board, Initialize With "-"
+	for (int8_t x = 0; x < 6; x++) //Draw Board, Initialize With "-"
 	{
-		for (int y = 0; y < 7; y++)
+		for (int8_t y = 0; y < 7; y++)
 			board[x][y] = '-';
 	}
 	
@@ -75,8 +96,27 @@ int main ()
 	{
 		drawboard(cout, board, 6, 7); //Draw Board on Screen
 		drawboard(outfile, board, 6, 7); //Draw Board on File
-		player ^= 1; //XOR With 1, Switch Player from 0 to 1, or Vice Versa, Game Will Start at 0
-		win = humanmove(outfile, player, board, 6, 7); //Check for Win
+		player ^= 1; //XOR With 1, Switch Player from 0 to 1, or Vice Versa, Game Will Start at First Player
+		
+		//Call Move Function Depending on Number of Human Players
+		switch (nop)
+		{
+			case 0: //No Humans
+				win = compmove(outfile, diff, player, board, 6, 7); //Check for Win
+				break;
+			case 1: //One Human
+				if (player==first) //Booleans Match, Computer's Turn
+					win = compmove(outfile, diff, player, board, 6, 7); //Check for Win
+				else //Boolean's Don't Match, Human's Turn
+					win = humanmove(outfile, player, board, 6, 7); //Check for Win
+				break;
+			case 2: //Both Human
+				win = humanmove(outfile, player, board, 6, 7); //Check for Win
+				break;
+			default: //Shouldn't Happen, but Just in Case
+				win = -1;
+				break;
+		}
 	}
 	
 	//Print Board Last Time
@@ -89,7 +129,7 @@ int main ()
 		case -1: //Player Chose to Quit
 			cout<<"\nGame Quit\n"<<endl;
 			outfile<<"\nGame Quit\n"<<endl;
-			break; //End Program
+			break;
 		case 1: //Game was Won
 			cout<<"\nPlayer "<<(player+1)<<" wins!"<<endl;
 			outfile<<"\nPlayer "<<(player+1)<<" wins!"<<endl;
@@ -110,16 +150,16 @@ int main ()
 // This function prints the board to the indicated ostream object.
 // The values in the board are 'X' for player 1, 'O' (the letter) for player 2, and 
 // the ASCII value of 0 (zero) for an empty space.
-void drawboard(ostream & out, char b[][7], int r, int c) 
+void drawboard(ostream & out, char b[][7], int8_t r, int8_t c) 
 {
 	out << endl;
 	
-	for (int i=1; i<=c; i++) //Display Column Numbers
-		out<<i<<" ";
+	for (int8_t i=1; i<=c; i++) //Display Column Numbers
+		out<<(int) i<<" "; //Display as Integers
 	out<<"\n"<<endl;	
-	for (int x = r-1; x >= 0; x--)  //Output Game Board
+	for (int8_t x = r-1; x >= 0; x--)  //Output Game Board
 	{
-		for (int y = 0; y < c; y++)
+		for (int8_t y = 0; y < c; y++)
 		{
 			if (b[x][y] == 0)
 				out << "  ";
@@ -132,11 +172,11 @@ void drawboard(ostream & out, char b[][7], int r, int c)
 	out << endl << endl;
 } // end drawboard function
 
-int8_t humanmove(ostream & out, bool player, char board[][7], int rows, int columns)
+int8_t humanmove(ostream & out, bool player, char board[][7], int8_t rows, int8_t columns) //Function to Handle Human Move
 {
 	int col; //Playing Column
-	int r = 0; //Playing Row, Initialized to Zero
-	char symbol;
+	int8_t r = 0; //Playing Row, Initialized to Zero
+	char symbol; //Playing Symbol
 	
 	if (player== 0) //First Player is X
 		symbol = 'X';
@@ -157,24 +197,24 @@ int8_t humanmove(ostream & out, bool player, char board[][7], int rows, int colu
 	
 	col-= 1; //To Adjust for Zero-Indexing
 	
-	while (board[r][col] != '-' && r<=rows) //Loop Till Open Space in Column Found
-		r++;
-	
-	if (r>rows) //Display if Row is Filled, Select Again
+	if (board[rows-1][col] != '-') //Display if Row is Filled, Select Again
 	{
 		cout<<"\nThat column is filled.\n"<<endl;
 		return humanmove(out, player, board, rows, columns); //Call Function Again
 	}
+	
+	while (board[r][col] != '-' && r<=rows) //Loop Till Open Space in Column Found
+		r++;
 
 	board[r][col] = symbol; //Play Piece
 	cout<<"\nPlayer "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Display Play Message
 	out<<"Player "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Outfile Play Message
 	
-	if (verticalwin(board, rows, columns, r, col)) //Check for Vertical Win
-		return 1;
-	if (horizontalwin(board, rows, columns, r, col)) //Check for Horizontal Win
-		return 1;
-	if (diagonalwin(board, rows, columns, r, col)) //Check for Horizontal Win
+	if (
+			verticalwin(board, rows, columns, r, col) || 
+			horizontalwin(board, rows, columns, r, col) || 
+			diagonalwin(board, rows, columns, r, col)
+		) //Check for Game Win
 		return 1;
 	if (draw(board, rows, columns)) //Check for Draw Game
 		return 2;
@@ -182,10 +222,47 @@ int8_t humanmove(ostream & out, bool player, char board[][7], int rows, int colu
 	return 0;
 }
 
-bool verticalwin(char board[][7], int rows, int columns, int moverow, int movecolumn) //Funtion That Checks for Vertical Win
+int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t rows, int8_t columns) //This Function Handles the Dumb Computer Move
 {
-	int count = 1; //Hold Count of Consecutive Pieces Vertically
-	int r; //To Traverse Array to Check Pieces
+	int8_t col; //Playing Column
+	int8_t r = 0; //Playing Row, Initialized to Zero
+	char symbol; //Playing Symbol
+	
+	if (player== 0) //First Player is X
+		symbol = 'X';
+	else //Second is O
+		symbol = 'O';
+	
+	//Create Random Number from 0-6, Loop Till Acceptable Input
+	do
+	{
+		col=rand()%6;
+	}
+	while (board[rows-1][col] != '-');
+	
+	while (board[r][col] != '-' && r<=rows) //Loop Till Open Space in Column Found
+		r++;
+	
+	board[r][col] = symbol; //Play Piece
+	cout<<"\nComputer Player "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Display Play Message
+	out<<"Computer Player "<<(player+1)<<" plays in column "<<(col+1)<<endl; //Outfile Play Message
+	
+	if (
+			verticalwin(board, rows, columns, r, col) || 
+			horizontalwin(board, rows, columns, r, col) || 
+			diagonalwin(board, rows, columns, r, col)
+		) //Check for Game Win
+		return 1;
+	if (draw(board, rows, columns)) //Check for Draw Game
+		return 2;
+	
+	return 0;
+}
+
+bool verticalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn) //Funtion That Checks for Vertical Win
+{
+	int8_t count = 1; //Hold Count of Consecutive Pieces Vertically
+	int8_t r; //To Traverse Array to Check Pieces
 
 	if (moverow>=3) //No Point in Checking if not High Enough
 	{
@@ -204,10 +281,10 @@ bool verticalwin(char board[][7], int rows, int columns, int moverow, int moveco
 	return false; //Default, Return False
 }
 
-bool horizontalwin(char board[][7], int rows, int columns, int moverow, int movecolumn) //Funtion That Checks for Horizontal Win
+bool horizontalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn) //Funtion That Checks for Horizontal Win
 {
-	int count = 1; //Keep Count of Consecutive Pieces
-	int c = movecolumn-1; //To Traverse Array to Check Pieces
+	int8_t count = 1; //Keep Count of Consecutive Pieces
+	int8_t c = movecolumn-1; //To Traverse Array to Check Pieces
 	
 	while (board[moverow][movecolumn] == board[moverow][c] && c>=0) //Count Consecutive Pieces to the Left
 	{
@@ -229,11 +306,11 @@ bool horizontalwin(char board[][7], int rows, int columns, int moverow, int move
 	return false; //Default Return False
 }
 
-bool diagonalwin(char board[][7], int rows, int columns, int moverow, int movecolumn) //Funtion That Checks for Diagonal Win
+bool diagonalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn) //Funtion That Checks for Diagonal Win
 {
-	int count = 1; //Keep Count of Consecutive Pieces
-	int r = moverow-1; //To Traverse Rows to Check Pieces
-	int c = movecolumn-1; //To Traverse Columns to Check Pieces
+	int8_t count = 1; //Keep Count of Consecutive Pieces
+	int8_t r = moverow-1; //To Traverse Rows to Check Pieces
+	int8_t c = movecolumn-1; //To Traverse Columns to Check Pieces
 	
 	while (board[moverow][movecolumn] == board[r][c] && r>=0 && c>=0) //Count Consecutive Pieces to the Down-Left
 	{
@@ -259,9 +336,9 @@ bool diagonalwin(char board[][7], int rows, int columns, int moverow, int moveco
 	
 }
 
-bool draw(char board[][7], int rows, int columns) //Function That Checks for Draw Game
+bool draw(char board[][7], int8_t rows, int8_t columns) //Function That Checks for Draw Game
 {
-	int i = 0; //To Traverse Top Row
+	int8_t i = 0; //To Traverse Top Row
 	
 	while (board[rows-1][i] != '-') //Traverse Top Row
 		i++;
