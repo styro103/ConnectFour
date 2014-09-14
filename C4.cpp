@@ -13,9 +13,9 @@ using namespace std;
 void drawboard(ostream &, char [][7], int8_t, int8_t); // This Function Draws the Board.
 int8_t humanmove(ostream & out, bool player, char board[][7], int8_t rows, int8_t columns); //This Function Handles the Human Move
 int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t rows, int8_t columns); //This Function Handles the Dumb Computer Move
-bool verticalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Vertical Win
-bool horizontalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Horizontal Win
-bool diagonalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Funtion That Checks for Diagonal Win
+bool verticalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Function That Checks for Vertical Win
+bool horizontalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Function That Checks for Horizontal Win
+bool diagonalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Function That Checks for Diagonal Win
 bool draw(char board[][7], int8_t rows, int8_t columns); //Function That Checks for Draw Game
 int8_t checkboard(char symbol, char board[][7], int8_t rows, int8_t columns); //Function for Computer to Check for Win or Loss
 bool * checkmoves(char symbol, char board[][7],int8_t rows, int8_t columns); //Function to Check if Computer Move Will Allow Human to Win
