@@ -12,16 +12,16 @@ using namespace std;
 
 void drawboard(ostream &, char [][7], int8_t, int8_t); // This Function Draws the Board.
 int8_t humanmove(ostream & out, bool player, char board[][7], int8_t rows, int8_t columns); //This Function Handles the Human Move
-int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t rows, int8_t columns); //This Function Handles the Dumb Computer Move
+int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t rows, int8_t columns); //This Function Handles the Computer Move
 bool verticalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Function That Checks for Vertical Win
 bool horizontalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Function That Checks for Horizontal Win
 bool diagonalwin(char board[][7], int8_t rows, int8_t columns, int8_t moverow, int8_t movecolumn); //Function That Checks for Diagonal Win
 bool draw(char board[][7], int8_t rows, int8_t columns); //Function That Checks for Draw Game
 int8_t checkboard(char symbol, char board[][7], int8_t rows, int8_t columns); //Function for Computer to Check for Win or Loss
-bool * checkmoves(char symbol, char board[][7],int8_t rows, int8_t columns); //Function to Check if Computer Move Will Allow Human to Win
+int8_t * checkmoves(char symbol, char board[][7],int8_t rows, int8_t columns); //Function to Check if Computer Move Will Allow Human to Win
 
 
-int main () 
+int main ()
 {
 	int nop; //Number of Human Players
 	int8_t diff; //Computer Difficulty Level, Will be 1, 2, or 3
@@ -230,13 +230,15 @@ int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t
 {
 	int8_t col = -1; //Playing Column, Initialized to -1
 	int8_t r = 0; //Playing Row, Initialized to Zero
-	bool * moves; //Pointer to Hold Potential Computer Loss Columns
+	int8_t * moves; //Pointer to Hold Potential Computer Loss Columns
 	char symbol; //Playing Symbol
 	
 	if (player== 0) //First Player is X
 		symbol = 'X';
 	else //Second is O
 		symbol = 'O';
+		
+	moves = checkmoves(symbol, board, rows, columns); //Check If Any Move Will Setup Human Win
 	
 	if (diff>1) //Difficulty Level is More Than 1
 	{
@@ -251,22 +253,27 @@ int8_t compmove(ostream & out, int8_t diff, bool player, char board[][7], int8_t
 			if (player==0) //Set to Opposite Player Symbol
 				tmp = 'O';
 				
-			col = checkboard(tmp, board, rows, columns); //Check If Human can Win
+			col = checkboard(tmp, board, rows, columns); //Check If Human Will Win Unless Blocked
 		}
 		if (col==-1 && diff==3) //Max Difficulty, Move Not Decided Yet
 		{
-			moves = checkmoves(symbol, board, rows, columns); //Check If Any Move Will Setup Human Win
+			//moves = checkmoves(symbol, board, rows, columns); //Check If Any Move Will Setup Human Win
 			
 			do //Choose Random Number, but Make Sure it Won't Result in Human Win
-				col=rand()%6;
-			while (board[rows-1][col] != '-' && moves[col]==1);
+				col=rand()%7;
+			while (board[rows-1][col] != '-' || moves[col]!=0);
 		}
 	}
+	
+	for (int i=0; i<columns; i++)
+		cout<<(int)moves[i]<<" ";
+	cout<<endl;
+			
 	if (col==-1)
 	{
 		//Create Random Number from 0-6, Loop Till Acceptable Input
 		do
-			col=rand()%6;
+			col=rand()%7;
 		while (board[rows-1][col] != '-');
 	}
 	
@@ -437,14 +444,16 @@ int8_t checkboard(char symbol, char board[][7], int8_t rows, int8_t columns) //F
 	return -1; //Return -1 on Default
 }
 
-bool * checkmoves(char symbol, char board[][7], int8_t rows, int8_t columns) //Function to Check if Computer Move Will Allow Human to Win
+int8_t * checkmoves(char symbol, char board[][7], int8_t rows, int8_t columns) //Function to Check if Computer Move Will Allow Human to Win
 {
 	///*static*/ bool moves[columns]; //Keep Track of Columns, Results in Size of moves "Not Being Constant"
-	static bool moves[7]; //Keep Track of Columns
+	static int8_t moves[7]; //Keep Track of Columns
 	char tmp = 'X'; //Human Player Symbol
-	int8_t movsum = 0; //Keep Sum of Array
+	bool zero = false; //See if moves Contains A Zero, Initialize to False
 	int8_t r; //Playing Row
 	int8_t c = 0; //Playing Column
+	
+	fill_n(moves, 7, 0); //Reset moves
 	
 	for (c; c<columns; c++) //Check Each Column
 	{	
@@ -453,38 +462,68 @@ bool * checkmoves(char symbol, char board[][7], int8_t rows, int8_t columns) //F
 			if (board[rows-1][c] !='-') //If Column Filled
 				moves[c] = 1; //Still Mark as Not Playable
 				
-			continue;
+			continue; //Goto Next Interation of for Loop
 		}
+		
 		r = 0; //Initialize Row
 		
 		while (board[r][c] != '-' && r<rows-1) //Loop Till Open Space in Column Found
 			r++;
 		
-		board[r][c] = symbol; //Place Piece
-		
-		if (symbol=='X') //If Computer was Player 1, Switch Symbol
-			tmp = 'O';
-			
-		board[++r][c] = tmp; //Place Opposite Piece in Row Above
+		board[r][c] = symbol; //Place Piece	
+		board[++r][c] = symbol; //Inrement r, Place Piece in Row Above
 		
 		if //Check for Game Win, No Need To Check Vertical Win Since Impossible
 		(
 			horizontalwin(board, rows, columns, r, c) || 
 			diagonalwin(board, rows, columns, r, c)
 		)
-			moves[c] = 1;
+			moves[c] = 2; //Mark in Array As Desired Opponent Move (Hold of if Possible)
+		
+		if (symbol=='X') //If Computer was Player 1, Switch Symbol
+			tmp = 'O';
+			
+		board[r][c] = tmp; //Place Opposite Piece
+		
+		if //Check for Game Win, No Need To Check Vertical Win Since Impossible
+		(
+			horizontalwin(board, rows, columns, r, c) || 
+			diagonalwin(board, rows, columns, r, c)
+		)
+			moves[c] = 1; //Mark in Array
 
-		movsum += moves[c];
-		board[r][c] = '-';
-		board[r-1][c] = '-';
+	 	board[r][c] = '-'; //Replace Piece
+		board[r-1][c] = '-'; //Replace Piece Under
 	}
 	
-	if (movsum>=columns) //If Any Move Results in Human Win
+	for (c=0; c<columns; c++)
+	{
+		if (moves[c]==0)
+		{
+			zero = true;
+			break;
+		}
+	}
+	
+	if (zero==false) //If No Desirable Moves
+	{
+		for (c=0; c<columns; c++) //Loop Through Moves
+		{
+			if (moves[c]==2) //Replace First Located Preferred Opponent Move With Zero
+			{
+				moves[c] = 0;
+				zero = true;
+				break;
+			}
+		}
+	}
+	
+	if (zero==false) //If Any Possible Move Results in Human Win (Moves Had All 1s)
 		fill_n(moves, 7, 0); //Reset moves, Doesn't Matter
 		
-	for (int i=0; i<columns; i++)
-		cout<<moves[i]<<" ";
-	cout<<endl;
+	//for (int i=0; i<columns; i++)
+		//cout<<moves[i]<<" ";
+	//cout<<endl;
 	
 	return moves;
 }
