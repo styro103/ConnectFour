@@ -1,6 +1,7 @@
 //*********************************************************
 //Shaun Mbateng
 //This program is a game of Connect Four.
+///Assuming All Correct Inputs, This program has an O(N*M) Time Complexity
 //*********************************************************
 
 #include <iostream>
