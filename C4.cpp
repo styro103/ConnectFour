@@ -28,7 +28,7 @@ int main ()
 	int8_t diff; //Computer Difficulty Level, Will be 1, 2, or 3
 	int8_t win = 0; //Whether Player has Won, or Quit, Will be 0, 1, or 2 When Returned
 	bool player = 1; //Player Number, Initialized to Second Player
-	bool first; //In 1 Human Player Game, Pick Who Goes First
+	bool first; //In 1 Human Player Game, Pick Who Goes First, Human or Computer
 	char board [6][7] = {0}; //Game Board
 	ofstream outfile; //File to Print Results to
 
